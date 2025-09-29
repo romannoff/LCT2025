@@ -1,0 +1,19 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    container_name: lct2025-api
+    ports:
+      - "2727:2727"
+    restart: always
+
+  sampler:
+    build: .
+    container_name: lct2025-sampler
+    command: python sampler.py
+    depends_on:
+      - api
+    environment:
+      - API_URL=http://api:2727/api/v1/measurements
+    restart: on-failure
