@@ -33,7 +33,7 @@ class StreamCTGAnalyzer:
         self.current_features = {'patient_id': patient_id, 'bpm_median': 0}
 
         self.model = CatBoostClassifier()
-        self.model.load_model('model.cbm')
+        self.model.load_model('models/model.cbm')
 
         # Промежуточные статистики для потокового вычисления статистик
         self.bpm_stats = None
