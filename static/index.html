@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CTG Data Stream</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #messages { 
+            height: 400px; 
+            overflow-y: auto; 
+            border: 1px solid #ccc; 
+            padding: 10px; 
+            margin-top: 20px;
+        }
+        .message { 
+            margin: 5px 0; 
+            padding: 8px; 
+            background: #f5f5f5; 
+            border-radius: 4px; 
+        }
+    </style>
+</head>
+<body>
+    <h1>Real-time CTG Data Stream</h1>
+    <div>Patient ID: <span id="patientId">0</span></div>
+    <div>Status: <span id="status">Disconnected</span></div>
+    
+    <button onclick="connect()">Connect</button>
+    <button onclick="disconnect()">Disconnect</button>
+    
+    <h3>Received Messages:</h3>
+    <div id="messages"></div>
+
+    <script>
+        let ws = null;
+        const patientId = "0";
+
+        function connect() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                return;
+            }
+
+            ws = new WebSocket(`ws://${window.location.host}/ws/${patientId}`);
+            
+            ws.onopen = function() {
+                document.getElementById('status').textContent = 'Connected';
+                console.log("WebSocket connected");
+            };
+            
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                const messagesDiv = document.getElementById('messages');
+                const messageElement = document.createElement('div');
+                messageElement.className = 'message';
+                messageElement.textContent = JSON.stringify(data, null, 2);
+                messagesDiv.appendChild(messageElement);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            };
+            
+            ws.onclose = function() {
+                document.getElementById('status').textContent = 'Disconnected';
+                console.log("WebSocket disconnected");
+            };
+            
+            ws.onerror = function(error) {
+                document.getElementById('status').textContent = 'Error';
+                console.error("WebSocket error:", error);
+            };
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        // Автоподключение при загрузке страницы
+        window.onload = connect;
+    </script>
+</body>
+</html>
