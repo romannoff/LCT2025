@@ -3,7 +3,8 @@ import time
 import requests
 import os
 
-API_URL = os.getenv("API_URL", "http://localhost:2727/api/v1/measurements")
+# API_URL = os.getenv("API_URL", "http://localhost:2727/api/v1/measurements")
+API_URL = "http://api:2727/api/v1/measurements"
 
 def send(measure):
     resp = requests.post(API_URL, json=measure)

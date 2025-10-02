@@ -6,6 +6,7 @@ import warnings
 import math
 from collections import deque
 warnings.filterwarnings('ignore')
+import time
 
 def extract_ctg_features(bpm, uterus, features, patient_id=0, sampling_rate=4.0):
     """
@@ -69,6 +70,8 @@ def extract_ctg_features(bpm, uterus, features, patient_id=0, sampling_rate=4.0)
 
 def _extract_basic_stats(signal, prefix):
     """Базовые статистические признаки"""
+    if not signal.any(): # Проверка, если массив пуст
+        return {}
     return {
         # f'{prefix}_mean': np.mean(signal),            ##
         # f'{prefix}_std': np.std(signal),              ##
@@ -128,19 +131,16 @@ def extract_basic_stats_streaming(new_value, features, events, state=None, prefi
     # Коэффициент вариации
     cv = std / mean if mean != 0 else 0
 
-
-
     # Тахикардия/брадикардия индикаторы
     if prefix == 'bpm':
         if new_value > 160:
             print(f'Повышенный ЧСС плода ({int(new_value)} уд./мин.)')
-            events['tachycard'] = 1
+            events['tachycard'] = {'value': 1, 'timestamp': time.time()} # <-- ИЗМЕНЕНИЕ
             state['tachycard_n'] += 1
         if new_value < 110:
             print(f'Пониженный ЧСС плода ({int(new_value)} уд./мин.)')
-            events['bradicard'] = 1 
-            state['bradicard_n'] += 1  
-
+            events['bradicard'] = {'value': 1, 'timestamp': time.time()} # <-- ИЗМЕНЕНИЕ
+            state['bradicard_n'] += 1   
     
     # Подготовка нового состояния
     new_state = {
@@ -153,7 +153,6 @@ def extract_basic_stats_streaming(new_value, features, events, state=None, prefi
         'bradicard_n': state['bradicard_n']
     }
 
-
     features[f'{prefix}_mean'] = mean
     features[f'{prefix}_std'] = std
     features[f'{prefix}_min'] = min_val
@@ -164,18 +163,11 @@ def extract_basic_stats_streaming(new_value, features, events, state=None, prefi
         features['tachycardia_percentage'] = state['tachycard_n'] / n * 100
         features['bradycardia_percentage'] = state['bradicard_n'] / n * 100
     
-    # stats = {
-    #     f'{prefix}_mean': mean,
-    #     f'{prefix}_std': std,
-    #     f'{prefix}_min': min_val,
-    #     f'{prefix}_max': max_val,
-    #     f'{prefix}_cv': cv,
-    # }
-    
     return new_state
 
 def _extract_medical_features(bpm, features, sampling_rate):
     """Медицинские параметры ЧСС согласно клиническим протоколам"""
+    if not bpm.any(): return {}
     # Базальный ритм (медиана за весь период, исключая экстремальные значения)
     q25, q75 = features['bpm_q25'], features['bpm_q75']
     iqr = q75 - q25
@@ -185,21 +177,15 @@ def _extract_medical_features(bpm, features, sampling_rate):
     basal_mask = (bpm >= lower_bound) & (bpm <= upper_bound)
     basal_rate = np.median(bpm[basal_mask]) if np.any(basal_mask) else features['bpm_median']
     
-    
-    # tachycardia_perc = np.sum(bpm > 160) / len(bpm) * 100
-    # bradycardia_perc = np.sum(bpm < 110) / len(bpm) * 100
-    
     return {
         'basal_rate': basal_rate,
-        # 'tachycardia_percentage': tachycardia_perc,
-        # 'bradycardia_percentage': bradycardia_perc,
-        'basal_rate_category': 1 if basal_rate > 160 else (2 if basal_rate < 110 else 0)  # 0-норма, 1-тахи, 2-бради
+        'basal_rate_category': 1 if basal_rate > 160 else (2 if basal_rate < 110 else 0)
     }
 
 def _extract_variability_features(bpm, features, sampling_rate):
     """Признаки вариабельности сердечного ритма"""
+    if len(bpm) < 2: return {}
     # Долгосрочная вариабельность (LTV)
-    # ltv = np.std(bpm)
     ltv = features['bpm_std']
     
     # Краткосрочная вариабельность (STV) - средняя разница между соседними точками
@@ -224,7 +210,7 @@ def _extract_variability_features(bpm, features, sampling_rate):
 def extract_accel_decel_features_streaming(bpm, features, sampling_rate, stats, events):
     """Выявление акцелераций и децелераций в потоке данных"""
     
-    if features['bpm_median'] == 0:
+    if features.get('bpm_median', 0) == 0:
         features['accelerations_count'] = 0
         features['decelerations_count'] = 0
         features['accelerations_per_min'] = 0
@@ -232,7 +218,6 @@ def extract_accel_decel_features_streaming(bpm, features, sampling_rate, stats, 
         features['acceleration_total_duration'] = 0
         features['deceleration_total_duration'] = 0
         return stats
-
 
     stats['basal_rate'] = features['bpm_median']
     
@@ -264,16 +249,17 @@ def extract_accel_decel_features_streaming(bpm, features, sampling_rate, stats, 
         # Завершаем предыдущую серию если она была достаточно длинной
         if current_duration >= min_duration_points:
             duration_seconds = current_duration / sampling_rate
-            
+            event_timestamp = time.time() # <-- ДОБАВЛЕНО
+
             if current_state == 'accel':
                 features['accelerations_count'] += 1
                 features['acceleration_total_duration'] += duration_seconds
-                events['acceleration'] = 1
+                events['acceleration'] = {'value': 1, 'timestamp': event_timestamp} # <-- ИЗМЕНЕНИЕ
                 print('Завершена акцелерация')
             elif current_state == 'decel':
                 features['decelerations_count'] += 1
                 features['deceleration_total_duration'] += duration_seconds
-                events['deceleration'] = 1
+                events['deceleration'] = {'value': 1, 'timestamp': event_timestamp} # <-- ИЗМЕНЕНИЕ
                 print('Завершена децелерация')
         
         # Начинаем новую серию
@@ -288,16 +274,18 @@ def extract_accel_decel_features_streaming(bpm, features, sampling_rate, stats, 
     # Расчет features в реальном времени
     total_duration_min = stats['total_points'] / sampling_rate / 60
     
-    features['accelerations_per_min'] = (features['accelerations_count'] / total_duration_min 
-                                    if total_duration_min > 0 else 0)
-    features['decelerations_per_min'] = (features['decelerations_count'] / total_duration_min 
-                                    if total_duration_min > 0 else 0)
+    if total_duration_min > 0:
+        features['accelerations_per_min'] = features.get('accelerations_count', 0) / total_duration_min
+        features['decelerations_per_min'] = features.get('decelerations_count', 0) / total_duration_min
+    else:
+        features['accelerations_per_min'] = 0
+        features['decelerations_per_min'] = 0
     
     return stats
 
 def _extract_accel_decel_features(bpm, features, sampling_rate):
     """Выявление акцелераций и децелераций"""
-    # basal_rate = np.median(bpm)
+    if not bpm.any(): return {}
     basal_rate = features['bpm_median']
     
     # Пороги для акцелераций/децелераций (15 уд/мин от базального ритма)
@@ -322,8 +310,7 @@ def _extract_accel_decel_features(bpm, features, sampling_rate):
             
             if duration >= min_duration_points:
                 accel_count += 1
-                print('Выявлена акцелерация')
-                accel_total_duration += duration / sampling_rate  # в секундах
+                accel_total_duration += duration / sampling_rate
             i += duration
         # Проверка децелерации
         elif bpm[i] < decel_threshold:
@@ -333,8 +320,7 @@ def _extract_accel_decel_features(bpm, features, sampling_rate):
             
             if duration >= min_duration_points:
                 decel_count += 1
-                print('Выявлена децелерация')
-                decel_total_duration += duration / sampling_rate  # в секундах
+                decel_total_duration += duration / sampling_rate
             i += duration
         else:
             i += 1
@@ -352,8 +338,7 @@ def _extract_accel_decel_features(bpm, features, sampling_rate):
 
 def _extract_uterine_activity_features(uterus, features, sampling_rate):
     """Анализ маточной активности"""
-    # Поиск сокращений (пиков выше порога)
-    # threshold = np.mean(uterus) + np.std(uterus)
+    if not uterus.any(): return {}
     threshold = features['uterus_mean'] + features['uterus_std']
     peaks, properties = find_peaks(uterus, height=threshold, distance=int(60*sampling_rate))
     
@@ -373,43 +358,41 @@ def _extract_uterine_activity_features(uterus, features, sampling_rate):
 
 def _extract_correlation_features(bpm, uterus, sampling_rate):
     """Признаки взаимосвязи ЧСС и маточной активности"""
+    if len(bpm) < 2 or len(uterus) < 2: return {}
     # Корреляция между сигналами
-    if len(bpm) == len(uterus):
-        correlation = np.corrcoef(bpm, uterus)[0, 1] if not (np.all(bpm == bpm[0]) or np.all(uterus == uterus[0])) else 0
-    else:
-        min_len = min(len(bpm), len(uterus))
-        correlation = np.corrcoef(bpm[:min_len], uterus[:min_len])[0, 1] if min_len > 0 else 0
+    min_len = min(len(bpm), len(uterus))
+    correlation = np.corrcoef(bpm[:min_len], uterus[:min_len])[0, 1] if min_len > 1 and not (np.all(bpm[:min_len] == bpm[0]) or np.all(uterus[:min_len] == uterus[0])) else 0
     
     # Задержка между пиком сокращения и минимальным значением ЧСС
     uterus_peaks, _ = find_peaks(uterus, height=np.mean(uterus) + np.std(uterus), distance=int(120*sampling_rate))
     delays = []
     
-    for peak in uterus_peaks[:5]:  # анализируем первые 5 сокращений
+    for peak in uterus_peaks[:5]:
         if peak + int(60*sampling_rate) < len(bpm):
             window = bpm[peak:peak + int(60*sampling_rate)]
             if len(window) > 0:
                 min_idx = np.argmin(window)
-                delays.append(min_idx / sampling_rate)  # задержка в секундах
+                delays.append(min_idx / sampling_rate)
     
     mean_delay = np.mean(delays) if delays else 0
     
     return {
         'bpm_uterus_correlation': correlation,
         'mean_contraction_delay': mean_delay,
-        'delayed_decelerations_present': 1 if mean_delay > 10 else 0  # децелерации с задержкой >10 сек
+        'delayed_decelerations_present': 1 if mean_delay > 10 else 0
     }
 
 def _extract_spectral_features(bpm, sampling_rate):
     """Спектральные признаки вариабельности"""
+    if len(bpm) < 2: return {}
     from scipy.signal import periodogram
     
     try:
         f, Pxx = periodogram(bpm, fs=sampling_rate)
         
-        # Полосы частот для анализа вариабельности
-        vlf_band = (0.003, 0.04)    # Very Low Frequency
-        lf_band = (0.04, 0.15)      # Low Frequency  
-        hf_band = (0.15, 0.4)       # High Frequency
+        vlf_band = (0.003, 0.04)
+        lf_band = (0.04, 0.15)
+        hf_band = (0.15, 0.4)
         
         vlf_power = np.sum(Pxx[(f >= vlf_band[0]) & (f < vlf_band[1])])
         lf_power = np.sum(Pxx[(f >= lf_band[0]) & (f < lf_band[1])])
@@ -426,43 +409,13 @@ def _extract_spectral_features(bpm, sampling_rate):
             'lf_hf_ratio': lf_hf_ratio,
             'spectral_entropy': stats.entropy(Pxx[Pxx > 0]) if np.any(Pxx > 0) else 0
         }
-    except:
+    except Exception:
         return {k: 0 for k in ['spectral_vlf_power', 'spectral_lf_power', 'spectral_hf_power', 
                               'spectral_total_power', 'lf_hf_ratio', 'spectral_entropy']}
 
 def _extract_nonlinear_features(bpm):
     """Нелинейные динамические признаки"""
-    # Sample Entropy (упрощенная версия)
-    def sample_entropy(signal, m=2, r=0.2):
-        if len(signal) < m + 1:
-            return 0
-            
-        std_signal = np.std(signal)
-        if std_signal == 0:
-            return 0
-            
-        r = r * std_signal
-        
-        def _maxdist(x, y):
-            return np.max(np.abs(x - y))
-        
-        def _phi(m):
-            patterns = [signal[i:i+m] for i in range(len(signal) - m + 1)]
-            count = 0
-            for i in range(len(patterns)):
-                for j in range(i+1, len(patterns)):
-                    if _maxdist(patterns[i], patterns[j]) <= r:
-                        count += 1
-            return count / (len(patterns) * (len(patterns) - 1) / 2) if len(patterns) > 1 else 0
-        
-        phi_m = _phi(m)
-        phi_m1 = _phi(m + 1)
-        
-        return -np.log(phi_m1 / phi_m) if phi_m1 > 0 and phi_m > 0 else 0
-    
-    # sampen = sample_entropy(bpm)
-    
-    # Детерминированный хаос (упрощенно)
+    if len(bpm) < 2: return {}
     diff_signal = np.diff(bpm)
     chaos_measure = np.std(diff_signal) / np.std(bpm) if np.std(bpm) > 0 else 0
     
