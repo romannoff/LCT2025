@@ -315,7 +315,7 @@ F1: 0.88
 ----------
 
 # 8. Руководство пользователя
-[capture](https://github.com/user-attachments/files/22666173/capture_20251002211125718.bmp)
+![capture](https://github.com/user-attachments/files/22666173/capture_20251002211125718.bmp)
 
 ## Основные принципы работы интерфейса
 -   В верхней части — идентификатор пациентки, текущий статус (Green/Yellow/Red), время сессии.
