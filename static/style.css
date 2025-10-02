@@ -1,0 +1,45 @@
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; background-color: #f4f7f6; color: #333; }
+.dashboard { display: flex; flex-direction: column; height: 100vh; }
+header { background: #fff; padding: 15px 30px; border-bottom: 1px solid #ddd; box-shadow: 0 2px 4px rgba(0,0,0,0.05); z-index: 10; }
+header h1 { margin: 0; font-size: 24px; }
+.content { display: flex; flex: 1; padding: 20px; gap: 20px; overflow: hidden; }
+.charts-container { flex: 3; display: flex; flex-direction: column; gap: 20px; }
+.chart-wrapper { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); flex: 1; display: flex; flex-direction: column; }
+.chart-wrapper h2 { margin-top: 0; }
+.chart-wrapper canvas { flex-grow: 1; }
+.sidebar { flex: 1; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; padding-bottom: 20px; }
+.widget { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); flex-shrink: 0; }
+.widget h2 { margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
+.event-log { max-height: 150px; overflow-y: auto; font-size: 14px; }
+.event-log div { padding: 8px; border-bottom: 1px solid #f0f0f0; }
+.event-log div:last-child { border-bottom: none; }
+.event-log .critical { color: #d9534f; font-weight: bold; }
+.event-log .warning { color: #f0ad4e; font-weight: bold; }
+.event-log .info { color: #5cb85c; }
+/* Стили для индикатора риска */
+.gauge-container { display: flex; justify-content: center; align-items: center; padding: 10px 0; }
+.gauge { width: 150px; height: 75px; position: relative; border-radius: 150px 150px 0 0; background-color: #e0e0e0; overflow: hidden; }
+.gauge-fill { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(90deg, #5cb85c 0%, #f0ad4e 50%, #d9534f 100%); transform-origin: center bottom; transition: transform 0.5s; }
+.gauge-cover { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; position: absolute; background: #fff; font-size: 24px; font-weight: bold; padding-top: 15px; box-sizing: border-box; }
+#hypoxiaStatus { text-align: center; margin-top: 10px; font-weight: bold; font-size: 16px; }
+.risk-factors { margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; }
+.risk-factors-title { font-weight: bold; font-size: 14px; margin-bottom: 5px; color: #333; }
+.risk-factors ul { list-style-type: none; padding: 0; margin: 0; }
+.risk-factors li { font-size: 14px; padding: 4px 0; color: #d9534f; }
+/* Стили для графика тренда */
+.chart-wrapper-small { height: 150px; }
+/* Стили для загрузчика архива */
+.archive-uploader label { display: block; font-size: 14px; margin-top: 10px; margin-bottom: 5px; }
+.archive-uploader input[type="file"] { width: 100%; margin-bottom: 10px; }
+.archive-uploader button { width: 100%; padding: 10px; background-color: #337ab7; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-top: 10px; }
+.archive-uploader button:hover { background-color: #286090; }
+.archive-uploader button:disabled { background-color: #ccc; cursor: not-allowed; }
+.archive-result { margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee; }
+.archive-result p { margin: 5px 0; font-size: 14px; }
+.archive-result .result-title { font-weight: bold; margin-bottom: 10px; font-size: 16px; }
+.archive-result .highlight { font-weight: bold; color: #d9534f; }
+/* НОВЫЕ СТИЛИ ДЛЯ ДАННЫХ ПАЦИЕНТА */
+.patient-info { list-style: none; padding: 0; margin: 0; }
+.patient-info li { display: flex; justify-content: space-between; padding: 5px 0; font-size: 14px; border-bottom: 1px solid #f0f0f0; }
+.patient-info li:last-child { border-bottom: none; }
+.patient-info li strong { color: #555; }

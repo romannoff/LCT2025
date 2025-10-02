@@ -1,81 +1,84 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <title>CTG Data Stream</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        #messages { 
-            height: 400px; 
-            overflow-y: auto; 
-            border: 1px solid #ccc; 
-            padding: 10px; 
-            margin-top: 20px;
-        }
-        .message { 
-            margin: 5px 0; 
-            padding: 8px; 
-            background: #f5f5f5; 
-            border-radius: 4px; 
-        }
-    </style>
+    <meta charset="UTF-8">
+    <title>Система мониторинга КТГ</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation/dist/chartjs-plugin-annotation.min.js"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Real-time CTG Data Stream</h1>
-    <div>Patient ID: <span id="patientId">0</span></div>
-    <div>Status: <span id="status">Disconnected</span></div>
-    
-    <button onclick="connect()">Connect</button>
-    <button onclick="disconnect()">Disconnect</button>
-    
-    <h3>Received Messages:</h3>
-    <div id="messages"></div>
+    <div class="dashboard">
+        <header>
+            <h1>Панель мониторинга состояния плода</h1>
+            <div>Пациент ID: <span id="patientId">0</span> | Статус: <span id="status">Отключено</span></div>
+        </header>
 
-    <script>
-        let ws = null;
-        const patientId = "0";
+        <main class="content">
+            <div class.charts-container">
+                <div class="chart-wrapper">
+                    <h2>Частота сердечных сокращений плода (ЧСС, уд/мин)</h2>
+                    <canvas id="bpmChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                    <h2>Сократительная активность матки (Токо, %)</h2>
+                    <canvas id="uterusChart"></canvas>
+                </div>
+            </div>
 
-        function connect() {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                return;
-            }
-
-            ws = new WebSocket(`ws://${window.location.host}/ws/${patientId}`);
+            <aside class="sidebar">
+                <!-- НОВЫЙ ВИДЖЕТ: ДАННЫЕ ПАЦИЕНТА -->
+                <div class="widget">
+                    <h2>Данные пациента (ЭМК)</h2>
+                    <ul class="patient-info">
+                        <li><strong>Возраст:</strong> 32 года</li>
+                        <li><strong>Срок гестации:</strong> 39 недель 2 дня</li>
+                        <li><strong>Факторы риска:</strong> Гестационный диабет</li>
+                        <li><strong>Предыдущие роды:</strong> 1 (без осложнений)</li>
+                    </ul>
+                </div>
             
-            ws.onopen = function() {
-                document.getElementById('status').textContent = 'Connected';
-                console.log("WebSocket connected");
-            };
-            
-            ws.onmessage = function(event) {
-                const data = JSON.parse(event.data);
-                const messagesDiv = document.getElementById('messages');
-                const messageElement = document.createElement('div');
-                messageElement.className = 'message';
-                messageElement.textContent = JSON.stringify(data, null, 2);
-                messagesDiv.appendChild(messageElement);
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            };
-            
-            ws.onclose = function() {
-                document.getElementById('status').textContent = 'Disconnected';
-                console.log("WebSocket disconnected");
-            };
-            
-            ws.onerror = function(error) {
-                document.getElementById('status').textContent = 'Error';
-                console.error("WebSocket error:", error);
-            };
-        }
+                <div class="widget">
+                    <h2>Оценка риска гипоксии</h2>
+                    <div class="gauge-container">
+                        <div id="gauge" class="gauge">
+                            <div class="gauge-fill"></div>
+                            <div class="gauge-cover">0.00%</div>
+                        </div>
+                    </div>
+                    <div id="hypoxiaStatus">Оценка не проводилась</div>
+                    <div id="riskFactors" class="risk-factors"></div>
+                </div>
+                
+                <div class="widget">
+                    <h2>Динамика риска (прогноз)</h2>
+                    <div class="chart-wrapper-small">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
 
-        function disconnect() {
-            if (ws) {
-                ws.close();
-                ws = null;
-            }
-        }
+                <div class="widget">
+                    <h2>Ключевые события</h2>
+                    <div id="eventLog" class="event-log"></div>
+                </div>
 
-        // Автоподключение при загрузке страницы
-        window.onload = connect;
-    </script>
+                <div class="widget">
+                    <h2>Анализ архивной записи</h2>
+                    <div class="archive-uploader">
+                        <label for="bpmFileInput">BPM файл (.csv):</label>
+                        <input type="file" id="bpmFileInput" accept=".csv">
+                        <label for="uterusFileInput">Uterus файл (.csv):</label>
+                        <input type="file" id="uterusFileInput" accept=".csv">
+                        <button id="analyzeArchiveButton">Анализировать</button>
+                    </div>
+                    <div id="archiveResult" class="archive-result"></div>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <audio id="alertSound" src="https://www.soundjay.com/buttons/sounds/beep-07a.mp3" preload="auto"></audio>
+    <script src="script.js"></script>
 </body>
 </html>
