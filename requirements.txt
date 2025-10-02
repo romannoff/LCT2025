@@ -4,3 +4,4 @@ pydantic
 pandas
 catboost
 requests
+python-multipart
